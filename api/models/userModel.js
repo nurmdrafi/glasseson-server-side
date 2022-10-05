@@ -32,6 +32,20 @@ const userSchema = new mongoose.Schema({
     minLength: [3, "Your username must have 3 characters"],
     required: [true, "Please enter your username"],
   },
+  first_name: {
+    type: String,
+    trim: true,
+    require: [true, "Please enter your first name"],
+    lowercase: true,
+    minLength: [3, "Your first name must have 3 characters"]
+  },
+  last_name: {
+    type: String,
+    trim: true,
+    require: [true, "Please enter your last name"],
+    lowercase: true,
+    minLength: [3, "Your last name must have 3 characters"]
+  },
   email: {
     type: String,
     trim: true,
@@ -52,7 +66,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["user", "admin"],
+    enum: ["user", "admin", "super_admin"],
     default: "user",
   },
   refreshToken: {

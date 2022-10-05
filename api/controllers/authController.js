@@ -7,18 +7,19 @@ const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
 // create new user / register
 exports.handleRegister = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, first_name, last_name, password } = req.body;
 
     // check duplicate email in database
     const isExist = await User.findOne({ email: email });
     if (!isExist) {
       const user = new User({
-        username: username,
-        email: email,
-        password: password,
+        username,
+        email,
+        first_name,
+        last_name,
+        password,
         role: "user",
         refreshToken: "",
-        notes: [],
       });
       await user.save();
       res.status(201).json({ message: "New User Registered" });
@@ -107,7 +108,7 @@ exports.handleLogout = async (req, res) => {
     });
     res.status(200).json({ message: "User Logout" });
   } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
+    res.status(401).json({ message: "UnAuthorized Access" });
   }
 };
 
@@ -158,6 +159,6 @@ exports.verifyRefreshToken = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
+    res.status(401).json({ message: "UnAuthorized Access" });
   }
 };
