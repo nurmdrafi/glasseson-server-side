@@ -115,9 +115,9 @@ exports.handleLogout = async (req, res) => {
 exports.verifyRefreshToken = async (req, res) => {
   try {
     const prevRefreshToken = req?.cookies?.jwt;
-    const currentUser = User.findOne({ refreshToken: prevRefreshToken });
+    const currentUser = await User.findOne({ refreshToken: prevRefreshToken });
 
-    jwt.verify(prevRefreshToken, refreshTokenSecret, (err, decoded) => {
+    jwt.verify(prevRefreshToken, refreshTokenSecret, async (err, decoded) => {
       if (err || !currentUser) {
         res.status(403).send({ message: "Forbidden Access" });
       } else {
@@ -152,7 +152,7 @@ exports.verifyRefreshToken = async (req, res) => {
         });
 
         // store new refresh token
-        User.updateOne(
+        await User.updateOne(
           { email: decoded.email },
           { $set: { refreshToken: refreshToken } }
         );
