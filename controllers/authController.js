@@ -1,91 +1,87 @@
-const User = require("../models/userModel");
+const models = require("../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+const createError = require("http-errors");
+const { signAccessToken, signRefreshToken } = require("../helpers/JWT.sign");
 
 // create new user / register
-exports.handleRegister = async (req, res) => {
+exports.handleRegister = async (req, res, next) => {
   try {
     const { username, email, first_name, last_name, password } = req.body;
 
     // check duplicate email in database
-    const isExist = await User.findOne({ email: email });
-    if (!isExist) {
+    const isExist = await models.User.findOne({ email: email });
+    if (isExist)
+      throw createError.Conflict(`${email} is already been registered`);
+    else {
       const user = new User({
         username,
         email,
         first_name,
         last_name,
         password,
-        role: "user",
-        refreshToken: "",
       });
       await user.save();
       res.status(201).json({ message: "New User Registered" });
-    } else {
-      res.status(409).json({
-        message: `${email} is already been registered`,
-      });
     }
   } catch (error) {
+    // next(error);
     if (error.name === "ValidationError") {
-      res.status(400).send({ message: error.message });
+      const messages = [];
+      for (let field in error.errors) {
+        messages.push(error.errors[field].message);
+      }
+      res.status(422).json({ message: messages.join(", ").toString() });
     } else {
-      res.status(500).json({ message: "Internal Server Error" });
+      next(error);
     }
   }
 };
 
 // handle login
-exports.handleLogin = async (req, res) => {
-  const { email, password } = req.body;
-
+exports.handleLogin = async (req, res, next) => {
   try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      throw createError.BadRequest();
+    }
     // check valid user & password
     const currentUser = await User.findOne({ email: email });
-    const isMatch = await bcrypt.compare(password, currentUser.password);
+    if (!currentUser) {
+      throw createError.NotFound("Email is not exist");
+    } else {
+      const isMatch = await bcrypt.compare(password, currentUser.password);
+      if (!isMatch) {
+        throw createError.NotFound("Invalid password");
+      } else {
+        const accessToken = await signAccessToken(currentUser);
+        const refreshToken = await signRefreshToken(currentUser);
 
-    if (currentUser && isMatch) {
-      // create tokens
-      const payload = {
-        _id: currentUser._id,
-        username: currentUser.username,
-        email: currentUser.email,
-        role: currentUser.role,
-      };
+        // send tokens
+        res.cookie("jwt", refreshToken, {
+          httpOnly: true,
+          sameSite: "none",
+          secure: true,
+          maxAge: 24 * 60 * 60 * 1000,
+        });
+        res.json({
+          username: currentUser.username,
+          email: currentUser.email,
+          role: currentUser.role,
+          accessToken,
+        });
 
-      const accessToken = jwt.sign(payload, accessTokenSecret, {
-        expiresIn: "20m",
-      });
-      const refreshToken = jwt.sign(payload, refreshTokenSecret, {
-        expiresIn: "1d",
-      });
-
-      // send tokens
-      res.cookie("jwt", refreshToken, {
-        httpOnly: true,
-        sameSite: "none",
-        secure: true,
-        maxAge: 24 * 60 * 60 * 1000,
-      });
-      res.json({
-        username: currentUser.username,
-        email: currentUser.email,
-        role: currentUser.role,
-        accessToken,
-      });
-
-      // store refresh token
-      await User.updateOne(
-        { email: email },
-        { $set: { refreshToken: refreshToken } }
-      );
+        // store refresh token
+        await User.updateOne(
+          { email: email },
+          { $set: { refreshToken: refreshToken } }
+        );
+      }
     }
   } catch (error) {
-    res.status(404).json({
-      message: "Invalid Email/Password!!!",
-    });
+    next(error);
   }
 };
 

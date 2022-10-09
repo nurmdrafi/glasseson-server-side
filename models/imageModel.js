@@ -11,7 +11,6 @@ const imageModel = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: [product, blog],
   },
 });
 
