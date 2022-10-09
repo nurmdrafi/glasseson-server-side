@@ -4,15 +4,11 @@ const { databaseURL } = require("../config/index");
 const mongooseOptions = {
   useNewUrlParser: true,
 };
-connectingDatabase = () => {
+mongooseLoader = () => {
   mongoose
     .connect(databaseURL, mongooseOptions)
     .then(() => console.log("Mongodb connected"))
     .catch((err) => console.log(err.message));
-
-  mongoose.connection.on("connected", () => {
-    console.log("Mongoose connected to db");
-  });
 
   mongoose.connection.on("error", (err) => {
     console.log(err.message);
@@ -28,4 +24,4 @@ connectingDatabase = () => {
   });
 };
 
-module.exports = connectingDatabase;
+module.exports = mongooseLoader;

@@ -1,5 +1,6 @@
 const JWT = require("jsonwebtoken");
 const createError = require("http-errors");
+const { secret } = require("../config/index");
 
 exports.signAccessToken = (currentUser) => {
   return new Promise((resolve, reject) => {
@@ -9,13 +10,13 @@ exports.signAccessToken = (currentUser) => {
       email: currentUser.email,
       role: currentUser.role,
     };
-    const secret = process.env.ACCESS_TOKEN_SECRET;
+    const accessToken = secret.accessToken;
     const options = {
       expiresIn: "20m",
       issuer: "glassesOn - Eyeglasses Online Store & Blog",
       audience: currentUser.email,
     };
-    JWT.sign(payload, secret, options, (err, token) => {
+    JWT.sign(payload, accessToken, options, (err, token) => {
       if (err) {
         console.log(err.message);
         reject(createError.InternalServerError());
@@ -34,13 +35,13 @@ exports.signRefreshToken = (currentUser) => {
       email: currentUser.email,
       role: currentUser.role,
     };
-    const secret = process.env.REFRESH_TOKEN_SECRET;
+    const refreshToken = secret.refreshToken;
     const options = {
       expiresIn: "20m",
       issuer: "glassesOn - Eyeglasses Online Store & Blog",
       audience: currentUser.email,
     };
-    JWT.sign(payload, secret, options, (err, token) => {
+    JWT.sign(payload, refreshToken, options, (err, token) => {
       if (err) {
         console.log(err.message);
         reject(createError.InternalServerError());

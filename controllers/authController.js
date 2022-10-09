@@ -1,8 +1,7 @@
 const models = require("../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+const { secret } = require("../config/index");
 const createError = require("http-errors");
 const { signAccessToken, signRefreshToken } = require("../helpers/JWT.sign");
 
