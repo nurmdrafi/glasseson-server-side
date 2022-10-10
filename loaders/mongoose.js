@@ -7,11 +7,11 @@ const mongooseOptions = {
 mongooseLoader = () => {
   mongoose
     .connect(databaseURL, mongooseOptions)
-    .then(() => console.log("Mongodb connected"))
+    .then(() => console.log("Mongodb is connected"))
     .catch((err) => console.log(err.message));
 
   mongoose.connection.on("error", (err) => {
-    console.log(err.message);
+    console.log(err);
   });
 
   mongoose.connection.on("disconnected", () => {

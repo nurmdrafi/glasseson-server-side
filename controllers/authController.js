@@ -1,4 +1,4 @@
-const models = require("../models");
+const { User } = require("../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { secret } = require("../config/index");
@@ -11,7 +11,7 @@ exports.handleRegister = async (req, res, next) => {
     const { username, email, first_name, last_name, password } = req.body;
 
     // check duplicate email in database
-    const isExist = await models.User.findOne({ email: email });
+    const isExist = await User.findOne({ email: email });
     if (isExist)
       throw createError.Conflict(`${email} is already been registered`);
     else {
@@ -32,7 +32,9 @@ exports.handleRegister = async (req, res, next) => {
       for (let field in error.errors) {
         messages.push(error.errors[field].message);
       }
-      res.status(422).json({ message: messages.join(", ").toString() });
+      res
+        .status(422)
+        .json({ status: 422, message: messages.join(", ").toString() });
     } else {
       next(error);
     }
@@ -84,35 +86,40 @@ exports.handleLogin = async (req, res, next) => {
   }
 };
 
-exports.handleLogout = async (req, res) => {
+exports.handleLogout = async (req, res, next) => {
   try {
     const cookies = req.cookies;
     const refreshToken = cookies?.jwt;
+    if (!refreshToken) {
+      throw createError.Unauthorized("UnAuthorized Access");
+    } else {
+      // delete refresh token from database
+      await User.updateOne(
+        { refreshToken: refreshToken },
+        { $set: { refreshToken: "" } }
+      );
 
-    // delete refresh token from database
-    await User.updateOne(
-      { refreshToken: refreshToken },
-      { $set: { refreshToken: "" } }
-    );
-
-    // delete refresh token from cookie
-    res.clearCookie("jwt", {
-      httpOnly: true,
-      sameSite: "None",
-      secure: true,
-    });
-    res.status(200).json({ message: "User Logout" });
+      // delete refresh token from cookie
+      res.clearCookie("jwt", {
+        httpOnly: true,
+        sameSite: "None",
+        secure: true,
+      });
+      res.status(200).json({ message: "User Logout" });
+    }
   } catch (error) {
-    res.status(401).json({ message: "UnAuthorized Access" });
+    next(error);
   }
 };
 
 exports.verifyRefreshToken = async (req, res) => {
   try {
     const prevRefreshToken = req?.cookies?.jwt;
-    const currentUser = await User.findOne({ refreshToken: prevRefreshToken });
+    const currentUser = await User.findOne({
+      refreshToken: prevRefreshToken,
+    });
 
-    jwt.verify(prevRefreshToken, refreshTokenSecret, async (err, decoded) => {
+    jwt.verify(prevRefreshToken, secret.refreshToken, async (err, decoded) => {
       if (err || !currentUser) {
         res.status(403).send({ message: "Forbidden Access" });
       } else {
@@ -124,10 +131,10 @@ exports.verifyRefreshToken = async (req, res) => {
         };
 
         // create new tokens
-        const accessToken = jwt.sign(payload, accessTokenSecret, {
+        const accessToken = jwt.sign(payload, secret.accessToken, {
           expiresIn: "20m",
         });
-        const refreshToken = jwt.sign(payload, refreshTokenSecret, {
+        const refreshToken = jwt.sign(payload, secret.refreshToken, {
           expiresIn: "1d",
         });
 
