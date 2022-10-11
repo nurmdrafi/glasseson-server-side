@@ -1,8 +1,8 @@
-const routes = require("express").Router(),
-  authRoutes = require("./authRoutes");
+const routes = require("express").Router();
+const authRoutes = require("./authRoutes");
 
-  // blogRoutes = require("./blogRoutes"),
-  // paymentRoutes = require("./paymentRoutes");
+// blogRoutes = require("./blogRoutes"),
+// paymentRoutes = require("./paymentRoutes");
 
 routes.use("/auth", authRoutes);
 // routes.use("/blog", blogRoutes);

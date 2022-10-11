@@ -1,9 +1,11 @@
 const { User } = require("../models");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const { secret } = require("../config/index");
 const createError = require("http-errors");
-const { signAccessToken, signRefreshToken } = require("../helpers/JWT.sign");
+const {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} = require("../utils/generateJWT");
 
 // create new user / register
 exports.handleRegister = async (req, res, next) => {
@@ -26,18 +28,7 @@ exports.handleRegister = async (req, res, next) => {
       res.status(201).json({ message: "New User Registered" });
     }
   } catch (error) {
-    // next(error);
-    if (error.name === "ValidationError") {
-      const messages = [];
-      for (let field in error.errors) {
-        messages.push(error.errors[field].message);
-      }
-      res
-        .status(422)
-        .json({ status: 422, message: messages.join(", ").toString() });
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 
@@ -91,7 +82,7 @@ exports.handleLogout = async (req, res, next) => {
     const cookies = req.cookies;
     const refreshToken = cookies?.jwt;
     if (!refreshToken) {
-      throw createError.Unauthorized("UnAuthorized Access");
+      throw createError.Unauthorized();
     } else {
       // delete refresh token from database
       await User.updateOne(
@@ -112,55 +103,41 @@ exports.handleLogout = async (req, res, next) => {
   }
 };
 
-exports.verifyRefreshToken = async (req, res) => {
+exports.handleRefreshToken = async (req, res) => {
   try {
     const prevRefreshToken = req?.cookies?.jwt;
-    const currentUser = await User.findOne({
-      refreshToken: prevRefreshToken,
+    if (!prevRefreshToken) throw createError.BadRequest();
+
+    // const currentUser = await User.findOne({
+    //   refreshToken: prevRefreshToken,
+    // });
+
+    const payload = await verifyRefreshToken(prevRefreshToken);
+
+    const accessToken = await signAccessToken(payload);
+    const refreshToken = await signRefreshToken(payload);
+
+    // send tokens
+    res.cookie("jwt", refreshToken, {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
-    jwt.verify(prevRefreshToken, secret.refreshToken, async (err, decoded) => {
-      if (err || !currentUser) {
-        res.status(403).send({ message: "Forbidden Access" });
-      } else {
-        const payload = {
-          _id: decoded._id,
-          username: decoded.username,
-          email: decoded.email,
-          role: decoded.role,
-        };
-
-        // create new tokens
-        const accessToken = jwt.sign(payload, secret.accessToken, {
-          expiresIn: "20m",
-        });
-        const refreshToken = jwt.sign(payload, secret.refreshToken, {
-          expiresIn: "1d",
-        });
-
-        // send tokens
-        res.cookie("jwt", refreshToken, {
-          httpOnly: true,
-          sameSite: "none",
-          secure: true,
-          maxAge: 24 * 60 * 60 * 1000,
-        });
-
-        res.json({
-          username: decoded.username,
-          email: decoded.email,
-          role: decoded.role,
-          accessToken,
-        });
-
-        // store new refresh token
-        await User.updateOne(
-          { email: decoded.email },
-          { $set: { refreshToken: refreshToken } }
-        );
-      }
+    res.json({
+      username: decoded.username,
+      email: decoded.email,
+      role: decoded.role,
+      accessToken,
     });
+
+    // store new refresh token
+    await User.updateOne(
+      { email: decoded.email },
+      { $set: { refreshToken: refreshToken } }
+    );
   } catch (error) {
-    res.status(401).json({ message: "UnAuthorized Access" });
+    next(error);
   }
 };

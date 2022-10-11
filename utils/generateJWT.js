@@ -20,7 +20,6 @@ exports.signAccessToken = (currentUser) => {
       if (err) {
         console.log(err.message);
         reject(createError.InternalServerError());
-        return;
       }
       resolve(token);
     });
@@ -45,7 +44,6 @@ exports.signRefreshToken = (currentUser) => {
       if (err) {
         console.log(err.message);
         reject(createError.InternalServerError());
-        return;
       }
       // TODO: implement redis cache
       /* client.SET(userId, token, 'EX', 365 * 24 * 60 * 60, (err, reply) => {
@@ -57,6 +55,15 @@ exports.signRefreshToken = (currentUser) => {
         resolve(token)
       }) */
       resolve(token);
+    });
+  });
+};
+
+exports.verifyRefreshToken = (refreshToken) => {
+  return new Promise((resolve, reject) => {
+    JWT.verify(refreshToken, secret.refreshToken, async (err, payload) => {
+      if (err) return reject(createError.Unauthorized());
+      resolve(payload);
     });
   });
 };

@@ -1,21 +1,24 @@
 const jwt = require("jsonwebtoken");
+const createError = require("http-errors");
 const { secret } = require("../config/index");
 
-verifyJWT = (req, res, next) => {
-  try {
+exports.verifyAccessToken = (req, res, next) => {
+  if (!req.headers["authorization"]) {
+    return next(createError.Forbidden());
+  } else {
     const authHeader = req.headers.authorization;
     const accessToken = authHeader.split(" ")[1];
-
     jwt.verify(accessToken, secret.accessToken, (err, decoded) => {
       if (err) {
-        res.status(403).send({ message: "Forbidden Access" });
-      } else {
-        req.decoded = decoded;
-        next();
+        if (err.name === "JsonWebTokenError") {
+          return next(createError.Unauthorized());
+        } else {
+          return next(createError.Unauthorized(err.message));
+        }
       }
+      req.decoded = decoded;
+      next();
     });
-  } catch (error) {
-    return res.status(401).send({ message: "UnAuthorized Access" });
   }
 };
-module.exports = verifyJWT;
+module.exports = verifyAccessToken;
