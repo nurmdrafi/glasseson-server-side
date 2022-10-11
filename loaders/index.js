@@ -1,6 +1,6 @@
 const expressLoader = require("./express");
 const mongooseLoader = require("./mongoose");
-const redisLoader = require("./redis");
+const { redisLoader } = require("./redis");
 
 loaders = async ({ expressApp }) => {
   await mongooseLoader();

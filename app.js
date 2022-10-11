@@ -1,8 +1,9 @@
 const express = require("express");
 const createError = require("http-errors");
-const { port } = require("./config/index");
-const PORT = port || 5000;
+const config = require("./config");
+const PORT = config.port || 5000;
 const loaders = require("./loaders");
+const { client } = require("./loaders/redis");
 
 async function startServer() {
   const app = express();
@@ -29,6 +30,7 @@ async function startServer() {
       message: err.message,
     });
   });
+  client.SET("foo", "bar");
 
   // listening port
   app.listen(PORT, () => {

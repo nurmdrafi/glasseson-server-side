@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const createError = require("http-errors");
-const { secret } = require("../config/index");
+const config = require("../config");
 
 exports.verifyAccessToken = (req, res, next) => {
   if (!req.headers["authorization"]) {
@@ -8,7 +8,7 @@ exports.verifyAccessToken = (req, res, next) => {
   } else {
     const authHeader = req.headers.authorization;
     const accessToken = authHeader.split(" ")[1];
-    jwt.verify(accessToken, secret.accessToken, (err, decoded) => {
+    jwt.verify(accessToken, config.secret.accessToken, (err, decoded) => {
       if (err) {
         if (err.name === "JsonWebTokenError") {
           return next(createError.Unauthorized());

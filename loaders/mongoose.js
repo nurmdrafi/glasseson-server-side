@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
-const { databaseURL } = require("../config/index");
+const config = require("../config");
 
 const mongooseOptions = {
   useNewUrlParser: true,
 };
 mongooseLoader = () => {
   mongoose
-    .connect(databaseURL, mongooseOptions)
+    .connect(config.databaseURL, mongooseOptions)
     .then(() => console.log("Mongodb is connected"))
     .catch((err) => console.log(err.message));
 

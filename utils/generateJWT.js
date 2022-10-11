@@ -1,6 +1,6 @@
 const JWT = require("jsonwebtoken");
 const createError = require("http-errors");
-const { secret } = require("../config/index");
+const config = require("../config");
 
 exports.signAccessToken = (currentUser) => {
   return new Promise((resolve, reject) => {
@@ -10,7 +10,7 @@ exports.signAccessToken = (currentUser) => {
       email: currentUser.email,
       role: currentUser.role,
     };
-    const accessToken = secret.accessToken;
+    const accessToken = config.secret.accessToken;
     const options = {
       expiresIn: "20m",
       issuer: "glassesOn - Eyeglasses Online Store & Blog",
@@ -34,7 +34,7 @@ exports.signRefreshToken = (currentUser) => {
       email: currentUser.email,
       role: currentUser.role,
     };
-    const refreshToken = secret.refreshToken;
+    const refreshToken = config.secret.refreshToken;
     const options = {
       expiresIn: "20m",
       issuer: "glassesOn - Eyeglasses Online Store & Blog",
@@ -45,15 +45,6 @@ exports.signRefreshToken = (currentUser) => {
         console.log(err.message);
         reject(createError.InternalServerError());
       }
-      // TODO: implement redis cache
-      /* client.SET(userId, token, 'EX', 365 * 24 * 60 * 60, (err, reply) => {
-        if (err) {
-          console.log(err.message)
-          reject(createError.InternalServerError())
-          return
-        }
-        resolve(token)
-      }) */
       resolve(token);
     });
   });
@@ -61,9 +52,19 @@ exports.signRefreshToken = (currentUser) => {
 
 exports.verifyRefreshToken = (refreshToken) => {
   return new Promise((resolve, reject) => {
-    JWT.verify(refreshToken, secret.refreshToken, async (err, payload) => {
-      if (err) return reject(createError.Unauthorized());
-      resolve(payload);
-    });
+    JWT.verify(
+      refreshToken,
+      config.secret.refreshToken,
+      async (err, payload) => {
+        if (err) {
+          if (err.name === "JsonWebTokenError") {
+            return next(createError.Unauthorized());
+          } else {
+            return next(createError.Unauthorized(err.message));
+          }
+        }
+        resolve(payload);
+      }
+    );
   });
 };

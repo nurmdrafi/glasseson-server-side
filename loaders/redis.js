@@ -1,11 +1,12 @@
 const redis = require("redis");
+const config = require("../config");
 
-redisLoader = () => {
-  const client = redis.createClient({
-    port: 6379,
-    host: "127.0.0.1",
-  });
+const client = redis.createClient({
+  port: config.redis.port,
+  host: config.redis.host,
+});
 
+const redisLoader = () => {
   client.connect();
   client.on("connect", () => {
     console.log("Client connected to redis");
@@ -27,4 +28,4 @@ redisLoader = () => {
     client.quit();
   });
 };
-module.exports = redisLoader;
+module.exports = { client, redisLoader };
